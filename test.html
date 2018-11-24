@@ -30,6 +30,7 @@
         <script src="./node_modules/three/build/three.min.js"></script>
         <script src="./node_modules/cannon/build/cannon.min.js"></script>
         <script src="./node_modules/three/examples/js/controls/TrackballControls.js"></script>
+        <!-- <script src="./libs/TrackballControls.js"></script> -->
         <script src="./libs/Detector.js"></script>
         
         <script>
@@ -38,21 +39,15 @@
             var SCREEN_WIDTH = window.innerWidth;
             var SCREEN_HEIGHT = window.innerHeight - 2 * MARGIN;
             var NEAR = 5, FAR = 2000;
-            // var SHADOW_MAP_WIDTH = 2048; //1024;
-            // var SHADOW_MAP_HEIGHT = 2048; //1024;
             var SHADOW_MAP_WIDTH = 1024;
             var SHADOW_MAP_HEIGHT = 1024;
-
-            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-
-            var container;
-            var camera, scene, renderer;
 
             var scene = new THREE.Scene();
 
             var dt = 1/60;
 
-            // chain vars
+            var ballSize = 2;
+
             var chainCount = 40;
             var chainRadius = 0.5;
 
@@ -60,19 +55,28 @@
             var chimeCount = 10;
             var chimeLength = 40;
             var chimeRadius = 0.5;
+            //var chimeRadius = 2;
             var chimeDistance = 5;
-            var chimeShape = new CANNON.Cylinder(chimeRadius,chimeRadius,chimeLength,40);
 
-            // shared material
+            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+            var container, stats;
+            var camera, scene, renderer;
+
+            // Material
             var materialColor = 0xdddddd;
             var solidMaterial = new THREE.MeshLambertMaterial( { color: materialColor } );
 
+            var sphereMesh, sphereBody;
             var meshes = [];
             var bodies = [];
             var world;
 
+            var cylinderBody, cylinderBody2;
+
+            //init();
             initCannon();
-            initThree();
+            init();
             animate();
 
             function initCannon(){
@@ -83,84 +87,52 @@
                 world.quatNormalizeFast = false;
                 world.quatNormalizeSkip = 0;
 
-                // set up top
-                var topShape = new CANNON.Cylinder(chimeDistance+1,chimeDistance+1,0.5,40);
-                var topBody = new CANNON.Body({ mass: 0 });
-                topBody.addShape(topShape);
-                topBody.position.set(0,0,(chimeLength/2) + chainCount + 0.5)
-                world.addBody(topBody);
-                addVisual(topBody);
+                // create ground
+                var groundShape = new CANNON.Plane();
+                var groundBody = new CANNON.Body({ mass: 0 });
+                groundBody.addShape(groundShape);
+                groundBody.position.set(0,0,0);
+                world.addBody(groundBody);
+                addVisual(groundBody);
 
-                world.solver.iterations = chimeCount; // To be able to propagate force throw the chain of N spheres, we need at least N solver iterations.
-                for(var i=0; i<chimeCount; i++){
-                    
-                    // create chime
-                    var chimeBody = new CANNON.Body({ mass: 5 });
-                    chimeBody.addShape(chimeShape);
-                    chimeBody.linearDamping=0.01; // Damping makes the movement slow down with time
-                    chimeBody.angularDamping=0.01;
-                    
-                    var xChimePos = chimeDistance*Math.sin( (i/chimeCount) * (2*Math.PI) );
-                    var yChimePos = chimeDistance*Math.cos( (i/chimeCount) * (2*Math.PI) );
-                    var zChimePos = 0;
-                    
-                    chimeBody.position.set(xChimePos, yChimePos, zChimePos)
-                    world.addBody(chimeBody);
-                    addVisual(chimeBody);
+                // Create sphere
+                var sphereShape = new CANNON.Sphere(ballSize);
+                sphereBody = new CANNON.Body({
+                    mass: 5
+                });
+                sphereBody.addShape(sphereShape);
+                sphereBody.position.set(0,0,60);
+                //bodies.push(sphereBody);
+                world.addBody(sphereBody);
+                addVisual(sphereBody);
 
-                    var lastChainBody = null;
-                    for(var j=0; j<chainCount; j++) {
-                        var chainShape = new CANNON.Sphere(chainRadius);
-                        var chainBody = new CANNON.Body({ mass: 1 });
-                        chainBody.addShape(chainShape);
-                        chainBody.linearDamping=0.01; // Damping makes the movement slow down with time
-                        chainBody.angularDamping=0.01;
-                        chainBody.position.set(xChimePos, yChimePos, (chimeLength/2)+chainRadius+j);
-                        world.addBody(chainBody);
-                        addVisual(chainBody);
-                        
-                        // for first chain link, attach chime
-                        if(j == 0) {
-                            var cc = new CANNON.PointToPointConstraint(chimeBody,new CANNON.Vec3(0,0,(chimeLength/2)+chainRadius),chainBody,new CANNON.Vec3(0,0,0));
-                            world.addConstraint(cc);
-                        }
-                        // for last, attach to top and previous -- this can be made more efficient. repeated code
-                        else if(j == chainCount-1) {
-                            var tc = new CANNON.PointToPointConstraint(chainBody,new CANNON.Vec3(0,0,1),topBody,new CANNON.Vec3(xChimePos,yChimePos,0));
-                            var lc = new CANNON.PointToPointConstraint(lastChainBody,new CANNON.Vec3(0,0,1),chainBody,new CANNON.Vec3(0,0,0));
-                            world.addConstraint(lc);
-                            world.addConstraint(tc);
-                        }
-                        // for others, attach to each other
-                        else {
-                            var lc = new CANNON.PointToPointConstraint(lastChainBody,new CANNON.Vec3(0,0,1),chainBody,new CANNON.Vec3(0,0,0));
-                            world.addConstraint(lc);
-                        }
-
-                        // set last link to current link
-                        lastChainBody = chainBody;
-
-                    }
-
-                    chimeBody.velocity.x = 30 * Math.random(); 
-                    chimeBody.velocity.y = 30 * Math.random();
-
-                }
-
+                var sphere2shape = new CANNON.Sphere(ballSize);
+                var sphereBody2 = new CANNON.Body({
+                    mass: 1
+                });
+                sphereBody2.addShape(sphere2shape);
+                sphereBody2.position.set(1,0,ballSize);
+                world.addBody(sphereBody2);
+                addVisual(sphereBody2);
             }
 
-            function initThree() {
+            function init() {
 
                 container = document.createElement( 'div' );
                 document.body.appendChild( container );
 
                 // scene
+                // scene = new THREE.Scene();
                 scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
+
+                // AXES
+                var axesHelper = new THREE.AxesHelper( 20 );
+                scene.add( axesHelper );
 
                 // Camera
                 camera = new THREE.PerspectiveCamera( 24, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
                 camera.up.set(0,0,1);
-                camera.position.set(0,150,20);
+                camera.position.set(0,70,10);
 
                 scene.add( camera );
 
@@ -175,31 +147,35 @@
                 var radius = 100;
                 controls.minDistance = 0.0;
                 controls.maxDistance = radius * 1000;
+                //controls.keys = [ 65, 83, 68 ]; // [ rotateKey, zoomKey, panKey ]
                 controls.screen.width = SCREEN_WIDTH;
                 controls.screen.height = SCREEN_HEIGHT;
 
                 // lights
-                var light, ambient;
+                var light, materials;
+                scene.add( new THREE.AmbientLight( 0x666666 ) );
 
-                // LIGHTS
-                ambient = new THREE.AmbientLight( 0x222222 );
-                scene.add( ambient );
+                light = new THREE.DirectionalLight( 0xffffff, 1.75 );
+                var d = 5;
+
+                light.position.set( d, d, d );
+                light.castShadow = true;
 
                 light = new THREE.SpotLight( 0xffffff );
                 light.position.set( 30, 30, 40 );
                 light.target.position.set( 0, 0, 0 );
-
                 light.castShadow = true;
-
                 light.shadowCameraNear = 10;
                 light.shadowCameraFar = 100;//camera.far;
                 light.shadowCameraFov = 30;
-
                 light.shadowMapBias = 0.0039;
                 light.shadowMapDarkness = 0.5;
                 light.shadowMapWidth = SHADOW_MAP_WIDTH;
                 light.shadowMapHeight = SHADOW_MAP_HEIGHT;
-                scene.add(light);
+                scene.add( light );
+
+                ambient = new THREE.AmbientLight( 0x222222 );
+                scene.add( ambient );
 
                 // renderer
                 renderer = new THREE.WebGLRenderer( { antialias: true } );
@@ -214,6 +190,50 @@
                 renderer.shadowMap.enabled = true;
 
                 window.addEventListener( 'resize', onWindowResize, false );
+
+                // sphere
+                /*
+                var ballGeo = new THREE.SphereGeometry( ballSize, 20, 20 );
+                var ballMaterial = new THREE.MeshPhongMaterial( { color: 0x888888 } );
+
+                sphereMesh = new THREE.Mesh( ballGeo, ballMaterial );
+                sphereMesh.castShadow = true;
+                sphereMesh.receiveShadow = true;
+                meshes.push(sphereMesh);
+                scene.add( sphereMesh );
+                */
+
+                // ground
+                /*
+                var geometry = new THREE.PlaneGeometry( 100, 100 );
+                var material = new THREE.MeshPhongMaterial( { color: 0x888888 } );
+                var plane = new THREE.Mesh( geometry, material );
+                plane.castShadow = true;
+                plane.receiveShadow = true;
+                scene.add( plane );
+                */
+
+                // test cylinder
+                /*
+                var geometry = new THREE.CylinderGeometry( chimeRadius, chimeRadius, chimeLength, 32 );
+                var material = new THREE.MeshPhongMaterial( {color: 0xffff00} );
+                var cylinder = new THREE.Mesh( geometry, material );
+                cylinder.castShadow = true;
+                cylinder.receiveShadow = true;
+                meshes.push(cylinder);
+                scene.add( cylinder );
+                */
+
+                // geometry = new THREE.CylinderGeometry( chimeRadius, chimeRadius, chimeLength, 32 );
+                // material = new THREE.MeshPhongMaterial( {color: 0xffff00} );
+                // var cylinder2 = new THREE.Mesh( geometry, material );
+                // cylinder.castShadow = true;
+                // cylinder.receiveShadow = true;
+                // meshes.push(cylinder2);
+                // scene.add( cylinder2 );
+
+                // point camera
+                //camera.lookAt( sphereMesh.position );
             }
 
             function onWindowResize() {
@@ -231,11 +251,11 @@
             }
 
             function render() {
-                //renderer.clear();
+                //sphereMesh.position.copy(sphereBody.position);
+                //sphereMesh.position.copy(sphereBody.position);
                 
                 for(var i = 0; i < meshes.length; i++) {
                     meshes[i].position.copy(bodies[i].position);
-                    meshes[i].quaternion.copy(bodies[i].quaternion)
                 }
                 renderer.render( scene, camera );
             }
@@ -249,6 +269,8 @@
                 }
                 if(mesh) {
                     // Add body
+                    //this.bodies.push(body);
+                    //this.visuals.push(mesh);
                     bodies.push(body);
                     meshes.push(mesh);
                     body.visualref = mesh;
@@ -259,6 +281,7 @@
             };
 
             function shape2mesh(body) {
+                //var wireframe = this.settings.renderMode === "wireframe";
                 var obj = new THREE.Object3D();
 
                 for (var l = 0; l < body.shapes.length; l++) {
@@ -269,6 +292,7 @@
                     switch(shape.type){
 
                     case CANNON.Shape.types.SPHERE:
+                        console.log("sphere!!")
                         var sphere_geometry = new THREE.SphereGeometry( shape.radius, 16, 16);
                         mesh = new THREE.Mesh( sphere_geometry, solidMaterial );
                         break;
@@ -302,6 +326,7 @@
 
                     case CANNON.Shape.types.CONVEXPOLYHEDRON:
 
+                    console.log("CONVEX POLY")
                         var geo = new THREE.Geometry();
 
                         // Add vertices
