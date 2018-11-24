@@ -68,8 +68,8 @@
             var chimeShape = new CANNON.Cylinder(chimeRadius,chimeRadius,chimeLength,40);
 
             // shared material
-            //var materialColor = 0xdddddd;
-            var materialColor = 0xff0000;
+            //var materialColor = 0xff0000;
+            var materialColor = 0xdddddd;
             var solidMaterial = new THREE.MeshLambertMaterial( { color: materialColor } );
 
             var meshes = [];
@@ -281,7 +281,27 @@
                 for(var i=0; i<world.contacts.length; i++){
                     var c = world.contacts[i];
 
+                    for(var j=0; j<bodies.length; j++) {
+                        if(c.bi === bodies[j] || c.bj === bodies[j]) {
+                            // console.log(i);
+                            // console.log(bodies[j]);
+                            //console.log(meshes[i])
+                            meshes[j].children[0].material.color.r = 1;
+                            meshes[j].children[0].material.color.g = 0;
+                            meshes[j].children[0].material.color.b = 0;
+                            // meshes[i].material.color.setHex( 0xff0000 );
+                            // console.log(meshes[i]);
+                        }
+                        else {
+                            meshes[j].children[0].material.color.r = 0;
+                            meshes[j].children[0].material.color.g = 0;
+                            meshes[j].children[0].material.color.b = 0;
+                        }
+                    }
+
                     // if(c.bi === chimeBodies[i]) {
+                    //     console.log(i);
+                    //     console.log(chimeBodies[i]);
                     //     //console.log(meshes[i])
                     //     meshes[i].children[0].material.color.r = 1;
                     //     meshes[i].children[0].material.color.g = 0;
@@ -289,37 +309,38 @@
                     //     // meshes[i].material.color.setHex( 0xff0000 );
                     //     // console.log(meshes[i]);
                     // }
-
-                    if(c.bi === chimeBodies[0]){
-                        playSine({'pitch': 'A3'});
-                    }
-                    if(c.bi === chimeBodies[1]){
-                        playSine({'pitch': 'C3'});
-                    }
-                    if(c.bi === chimeBodies[2]){
-                        playSine({'pitch': 'E3'});
-                    }
-                    if(c.bi === chimeBodies[3]){
-                        playSine({'pitch': 'G3'});
-                    }
-                    if(c.bi === chimeBodies[4]){
-                        playSine({'pitch': 'B4'});
-                    }
-                    if(c.bi === chimeBodies[5]){
-                        playSine({'pitch': 'D4'});
-                    }
-                    if(c.bi === chimeBodies[6]){
-                        playSine({'pitch': 'F4'});
-                    }
-                    if(c.bi === chimeBodies[7]){
-                        playSine({'pitch': 'A5'});
-                    }
-                    if(c.bi === chimeBodies[8]){
-                        playSine({'pitch': 'C5'});
-                    }
-                    if(c.bi === chimeBodies[9]){
-                        playSine({'pitch': 'E5'});
-                    }
+                    
+                    
+                    // if(c.bi === chimeBodies[0]){
+                    //     playSine({'pitch': 'A3'});
+                    // }
+                    // if(c.bi === chimeBodies[1]){
+                    //     playSine({'pitch': 'C3'});
+                    // }
+                    // if(c.bi === chimeBodies[2]){
+                    //     playSine({'pitch': 'E3'});
+                    // }
+                    // if(c.bi === chimeBodies[3]){
+                    //     playSine({'pitch': 'G3'});
+                    // }
+                    // if(c.bi === chimeBodies[4]){
+                    //     playSine({'pitch': 'B4'});
+                    // }
+                    // if(c.bi === chimeBodies[5]){
+                    //     playSine({'pitch': 'D4'});
+                    // }
+                    // if(c.bi === chimeBodies[6]){
+                    //     playSine({'pitch': 'F4'});
+                    // }
+                    // if(c.bi === chimeBodies[7]){
+                    //     playSine({'pitch': 'A5'});
+                    // }
+                    // if(c.bi === chimeBodies[8]){
+                    //     playSine({'pitch': 'C5'});
+                    // }
+                    // if(c.bi === chimeBodies[9]){
+                    //     playSine({'pitch': 'E5'});
+                    // }
                     
                     // for(var j=0; j<chimeBodies.length; j++) {
                     //     for(var k=0; k<chimeBodies.length; k++) {
@@ -418,7 +439,11 @@
                         }
                         geo.computeBoundingSphere();
                         geo.computeFaceNormals();
-                        mesh = new THREE.Mesh( geo, solidMaterial );
+                        
+                        // for each chime, add a NEW material
+                        var newMaterial = new THREE.MeshLambertMaterial( { color: materialColor } );
+
+                        mesh = new THREE.Mesh( geo, newMaterial );
                         break;
 
                     case CANNON.Shape.types.HEIGHTFIELD:
