@@ -68,7 +68,8 @@
             var chimeShape = new CANNON.Cylinder(chimeRadius,chimeRadius,chimeLength,40);
 
             // shared material
-            var materialColor = 0xdddddd;
+            //var materialColor = 0xdddddd;
+            var materialColor = 0xff0000;
             var solidMaterial = new THREE.MeshLambertMaterial( { color: materialColor } );
 
             var meshes = [];
@@ -276,8 +277,18 @@
 
             function checkBodyContacts(){
                 info.innerHTML = 'chimes.club, contacts: ' + world.contacts.length;
+                
                 for(var i=0; i<world.contacts.length; i++){
                     var c = world.contacts[i];
+
+                    // if(c.bi === chimeBodies[i]) {
+                    //     //console.log(meshes[i])
+                    //     meshes[i].children[0].material.color.r = 1;
+                    //     meshes[i].children[0].material.color.g = 0;
+                    //     meshes[i].children[0].material.color.b = 0;
+                    //     // meshes[i].material.color.setHex( 0xff0000 );
+                    //     // console.log(meshes[i]);
+                    // }
 
                     if(c.bi === chimeBodies[0]){
                         playSine({'pitch': 'A3'});
@@ -495,7 +506,7 @@
             function playSine(pitch) {
                 var sine = new Wad({
                     source  : 'sine',
-                    volume  : 0.5,   // Peak volume can range from 0 to an arbitrarily high number, but you probably shouldn't set it higher than 1.
+                    volume  : 0.2,   // Peak volume can range from 0 to an arbitrarily high number, but you probably shouldn't set it higher than 1.
                     loop    : false, // If true, the audio will loop. This parameter only works for audio clips, and does nothing for oscillators. 
                     rate    : 1.0, // How fast to play an audio clip, relative to its normal speed. 2.0 is double speed, 0.5 is half speed, etc.
                     offset  : 0,     // Where in the audio clip playback begins, measured in seconds from the start of the audio clip.
