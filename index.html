@@ -32,6 +32,7 @@
         <script src="./node_modules/web-audio-daw/build/wad.min.js"></script>
         <script src="./node_modules/three/examples/js/controls/TrackballControls.js"></script>
         <script src="./libs/Detector.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.min.js"></script>
         
         <script>
 
@@ -265,51 +266,34 @@
                 renderer.render( scene, camera );
             }
 
-            // function bodiesAreInContact(bodyA, bodyB){
-            //     for(var i=0; i<world.contacts.length; i++){
-            //         var c = world.contacts[i];
-            //         if((c.bi === bodyA && c.bj === bodyB) || (c.bi === bodyB && c.bj === bodyA)){
-            //             return true;
-            //         }
-            //     }
-            //     return false;
-            // }
-
             function checkBodyContacts(){
                 info.innerHTML = 'chimes.club, contacts: ' + world.contacts.length;
+
+                // reset colors
+                for(var j=0; j<bodies.length; j++) {
+                    meshes[j].children[0].material.color.r = 0.1;
+                    meshes[j].children[0].material.color.g = 0.1;
+                    meshes[j].children[0].material.color.b = 0.1;
+                }
                 
                 for(var i=0; i<world.contacts.length; i++){
                     var c = world.contacts[i];
-
                     for(var j=0; j<bodies.length; j++) {
                         if(c.bi === bodies[j] || c.bj === bodies[j]) {
-                            // console.log(i);
-                            // console.log(bodies[j]);
-                            //console.log(meshes[i])
-                            meshes[j].children[0].material.color.r = 1;
-                            meshes[j].children[0].material.color.g = 0;
-                            meshes[j].children[0].material.color.b = 0;
-                            // meshes[i].material.color.setHex( 0xff0000 );
-                            // console.log(meshes[i]);
-                        }
-                        else {
-                            meshes[j].children[0].material.color.r = 0;
-                            meshes[j].children[0].material.color.g = 0;
-                            meshes[j].children[0].material.color.b = 0;
+                            var isChime = false;
+                            for(var k=0; k<chimeBodies.length; k++) {
+                                if(_.isEqual(chimeBodies[k],bodies[j])) {
+                                    isChime = true;
+                                }
+                            }
+                            // if colliding and a chime, color red
+                            if(isChime) {
+                                meshes[j].children[0].material.color.r = 1;
+                                meshes[j].children[0].material.color.g = 0;
+                                meshes[j].children[0].material.color.b = 0;
+                            }
                         }
                     }
-
-                    // if(c.bi === chimeBodies[i]) {
-                    //     console.log(i);
-                    //     console.log(chimeBodies[i]);
-                    //     //console.log(meshes[i])
-                    //     meshes[i].children[0].material.color.r = 1;
-                    //     meshes[i].children[0].material.color.g = 0;
-                    //     meshes[i].children[0].material.color.b = 0;
-                    //     // meshes[i].material.color.setHex( 0xff0000 );
-                    //     // console.log(meshes[i]);
-                    // }
-                    
                     
                     // if(c.bi === chimeBodies[0]){
                     //     playSine({'pitch': 'A3'});
@@ -340,18 +324,6 @@
                     // }
                     // if(c.bi === chimeBodies[9]){
                     //     playSine({'pitch': 'E5'});
-                    // }
-                    
-                    // for(var j=0; j<chimeBodies.length; j++) {
-                    //     for(var k=0; k<chimeBodies.length; k++) {
-                    //         if((c.bi === bodyA && c.bj === bodyB) || (c.bi === bodyB && c.bj === bodyA)){
-                    //             return true;
-                    //         }
-                    //     }
-                    // }
-
-                    // if((c.bi === bodyA && c.bj === bodyB) || (c.bi === bodyB && c.bj === bodyA)){
-                    //     return true;
                     // }
                 }
             }
