@@ -29,6 +29,7 @@
     <body>
         <script src="./node_modules/three/build/three.min.js"></script>
         <script src="./node_modules/cannon/build/cannon.min.js"></script>
+        <script src="./node_modules/web-audio-daw/build/wad.min.js"></script>
         <script src="./node_modules/three/examples/js/controls/TrackballControls.js"></script>
         <script src="./libs/Detector.js"></script>
         
@@ -52,6 +53,9 @@
 
             var dt = 1/60;
 
+            // html
+            var info;
+
             // chain vars
             var chainCount = 50;
             var chainRadius = 0.5;
@@ -69,6 +73,7 @@
 
             var meshes = [];
             var bodies = [];
+            var chimeBodies = []; // used for re-applying velocities
             var world;
 
             initCannon();
@@ -106,6 +111,7 @@
                     
                     chimeBody.position.set(xChimePos, yChimePos, zChimePos)
                     world.addBody(chimeBody);
+                    chimeBodies.push(chimeBody);
                     addVisual(chimeBody);
 
                     var lastChainBody = null;
@@ -157,7 +163,7 @@
                 // scene
                 scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
 
-                // Camera
+                // camera
                 camera = new THREE.PerspectiveCamera( 24, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
                 camera.up.set(0,0,1);
                 camera.position.set(0,150,20);
@@ -180,8 +186,6 @@
 
                 // lights
                 var light, ambient;
-
-                // LIGHTS
                 ambient = new THREE.AmbientLight( 0x222222 );
                 scene.add( ambient );
 
@@ -216,13 +220,13 @@
                 window.addEventListener( 'resize', onWindowResize, false );
 
                 // Add info
-                var info = document.createElement( 'div' );
+                info = document.createElement( 'div' );
                 info.style.position = 'absolute';
                 info.style.top = '15px';
                 info.style.width = '100%';
                 info.style.textAlign = 'center';
                 info.style.color = 'white';
-                info.innerHTML = 'chimes.club';
+                info.innerHTML = 'chimes.club, contacts: 0';
                 container.appendChild( info );
             }
 
@@ -233,21 +237,91 @@
                 renderer.setSize( window.innerWidth, window.innerHeight );
             }
 
+            var frameCount = 1;
             function animate() {
+                checkBodyContacts();
+                // give the chimes a push every 10(?) secs
+                frameCount++;
+                if(frameCount % 1200 == 0) {
+                    for(var i=0; i<chimeBodies.length; i++) {
+                        chimeBodies[i].velocity.x = 30 * Math.random(); 
+                        chimeBodies[i].velocity.y = 30 * Math.random();
+                    }
+                    frameCount = 1;
+                }
+
                 requestAnimationFrame( animate );
                 controls.update();
                 world.step(dt);
                 render();
             }
 
-            function render() {
-                //renderer.clear();
-                
+            function render() {                
                 for(var i = 0; i < meshes.length; i++) {
                     meshes[i].position.copy(bodies[i].position);
                     meshes[i].quaternion.copy(bodies[i].quaternion)
                 }
                 renderer.render( scene, camera );
+            }
+
+            // function bodiesAreInContact(bodyA, bodyB){
+            //     for(var i=0; i<world.contacts.length; i++){
+            //         var c = world.contacts[i];
+            //         if((c.bi === bodyA && c.bj === bodyB) || (c.bi === bodyB && c.bj === bodyA)){
+            //             return true;
+            //         }
+            //     }
+            //     return false;
+            // }
+
+            function checkBodyContacts(){
+                info.innerHTML = 'chimes.club, contacts: ' + world.contacts.length;
+                for(var i=0; i<world.contacts.length; i++){
+                    var c = world.contacts[i];
+
+                    if(c.bi === chimeBodies[0]){
+                        playSine({'pitch': 'A3'});
+                    }
+                    if(c.bi === chimeBodies[1]){
+                        playSine({'pitch': 'C3'});
+                    }
+                    if(c.bi === chimeBodies[2]){
+                        playSine({'pitch': 'E3'});
+                    }
+                    if(c.bi === chimeBodies[3]){
+                        playSine({'pitch': 'G3'});
+                    }
+                    if(c.bi === chimeBodies[4]){
+                        playSine({'pitch': 'B4'});
+                    }
+                    if(c.bi === chimeBodies[5]){
+                        playSine({'pitch': 'D4'});
+                    }
+                    if(c.bi === chimeBodies[6]){
+                        playSine({'pitch': 'F4'});
+                    }
+                    if(c.bi === chimeBodies[7]){
+                        playSine({'pitch': 'A5'});
+                    }
+                    if(c.bi === chimeBodies[8]){
+                        playSine({'pitch': 'C5'});
+                    }
+                    if(c.bi === chimeBodies[9]){
+                        playSine({'pitch': 'E5'});
+                    }
+                    
+                    // for(var j=0; j<chimeBodies.length; j++) {
+                    //     for(var k=0; k<chimeBodies.length; k++) {
+                    //         if((c.bi === bodyA && c.bj === bodyB) || (c.bi === bodyB && c.bj === bodyA)){
+                    //             return true;
+                    //         }
+                    //     }
+                    // }
+
+                    // if((c.bi === bodyA && c.bj === bodyB) || (c.bi === bodyB && c.bj === bodyA)){
+                    //     return true;
+                    // }
+                }
             }
 
             function addVisual(body){
@@ -417,6 +491,36 @@
 
                 return obj;
             };
+
+            function playSine(pitch) {
+                var sine = new Wad({
+                    source  : 'sine',
+                    volume  : 0.5,   // Peak volume can range from 0 to an arbitrarily high number, but you probably shouldn't set it higher than 1.
+                    loop    : false, // If true, the audio will loop. This parameter only works for audio clips, and does nothing for oscillators. 
+                    rate    : 1.0, // How fast to play an audio clip, relative to its normal speed. 2.0 is double speed, 0.5 is half speed, etc.
+                    offset  : 0,     // Where in the audio clip playback begins, measured in seconds from the start of the audio clip.
+                    detune  : 0,     // Set a default detune on the constructor if you don't want to set detune on <code>play()</code>. Detune is measured in cents. 100 cents is equal to 1 semitone.
+                    panning : -.5,   // Horizontal placement of the sound source. Possible values are from 1 to -1.
+
+                    env     : {      // This is the ADSR envelope.
+                        attack  : 0.01,  // Time in seconds from onset to peak volume.  Common values for oscillators may range from 0.05 to 0.3.
+                        decay   : 0.5,  // Time in seconds from peak volume to sustain volume.
+                        sustain : 0.0,  // Sustain volume level. This is a percent of the peak volume, so sensible values are between 0 and 1.
+                        hold    : 0.0, // Time in seconds to maintain the sustain volume level. If this is not set to a lower value, oscillators must be manually stopped by calling their stop() method.
+                        release : 0.0     // Time in seconds from the end of the hold period to zero volume, or from calling stop() to zero volume.
+                    },
+                    filter  : {
+                        type      : 'lowpass', // What type of filter is applied.
+                        frequency : 600,       // The frequency, in hertz, to which the filter is applied.
+                        q         : 1,         // Q-factor.  No one knows what this does. The default value is 1. Sensible values are from 0 to 10.
+                        env       : {          // Filter envelope.
+                            frequency : 800, // If this is set, filter frequency will slide from filter.frequency to filter.env.frequency when a note is triggered.
+                            attack    : 0.5  // Time in seconds for the filter frequency to slide from filter.frequency to filter.env.frequency
+                        }
+                    }
+                });
+                sine.play(pitch);
+            }
 
         </script>
     </body>
