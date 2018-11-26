@@ -32,6 +32,7 @@
         <script src="./node_modules/web-audio-daw/build/wad.min.js"></script>
         <script src="./node_modules/three/examples/js/controls/TrackballControls.js"></script>
         <script src="./libs/Detector.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.min.js"></script>
         
         <script>
 
@@ -68,9 +69,13 @@
             var chimeShape = new CANNON.Cylinder(chimeRadius,chimeRadius,chimeLength,40);
 
             // shared material
-            //var materialColor = 0xdddddd;
-            var materialColor = 0xff0000;
-            var solidMaterial = new THREE.MeshLambertMaterial( { color: materialColor } );
+            //var materialColor = 0xff0000;
+            var materialColor = 0xdddddd;
+            var solidMaterial = new THREE.MeshPhongMaterial({ 
+                color: materialColor, 
+                specular: 0x050505,
+                shininess: 100 }
+            );
 
             var meshes = [];
             var bodies = [];
@@ -162,7 +167,8 @@
                 document.body.appendChild( container );
 
                 // scene
-                scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
+                //scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
+                scene.fog = new THREE.Fog( 0x000000, 1000, FAR );
 
                 // camera
                 camera = new THREE.PerspectiveCamera( 24, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
@@ -187,7 +193,8 @@
 
                 // lights
                 var light, ambient;
-                ambient = new THREE.AmbientLight( 0x222222 );
+                //ambient = new THREE.AmbientLight( 0x222222 );
+                ambient = new THREE.AmbientLight( 0x000000 );
                 scene.add( ambient );
 
                 light = new THREE.SpotLight( 0xffffff );
@@ -265,74 +272,70 @@
                 renderer.render( scene, camera );
             }
 
-            // function bodiesAreInContact(bodyA, bodyB){
-            //     for(var i=0; i<world.contacts.length; i++){
-            //         var c = world.contacts[i];
-            //         if((c.bi === bodyA && c.bj === bodyB) || (c.bi === bodyB && c.bj === bodyA)){
-            //             return true;
-            //         }
-            //     }
-            //     return false;
-            // }
-
             function checkBodyContacts(){
                 info.innerHTML = 'chimes.club, contacts: ' + world.contacts.length;
+
+                // reset colors
+                for(var j=0; j<bodies.length; j++) {
+                    meshes[j].children[0].material.color.r = 0.1;
+                    meshes[j].children[0].material.color.g = 0.1;
+                    meshes[j].children[0].material.color.b = 0.1;
+                }
                 
+                // reverse these for loops?
                 for(var i=0; i<world.contacts.length; i++){
                     var c = world.contacts[i];
-
-                    // if(c.bi === chimeBodies[i]) {
-                    //     //console.log(meshes[i])
-                    //     meshes[i].children[0].material.color.r = 1;
-                    //     meshes[i].children[0].material.color.g = 0;
-                    //     meshes[i].children[0].material.color.b = 0;
-                    //     // meshes[i].material.color.setHex( 0xff0000 );
-                    //     // console.log(meshes[i]);
-                    // }
-
-                    if(c.bi === chimeBodies[0]){
-                        playSine({'pitch': 'A3'});
-                    }
-                    if(c.bi === chimeBodies[1]){
-                        playSine({'pitch': 'C3'});
-                    }
-                    if(c.bi === chimeBodies[2]){
-                        playSine({'pitch': 'E3'});
-                    }
-                    if(c.bi === chimeBodies[3]){
-                        playSine({'pitch': 'G3'});
-                    }
-                    if(c.bi === chimeBodies[4]){
-                        playSine({'pitch': 'B4'});
-                    }
-                    if(c.bi === chimeBodies[5]){
-                        playSine({'pitch': 'D4'});
-                    }
-                    if(c.bi === chimeBodies[6]){
-                        playSine({'pitch': 'F4'});
-                    }
-                    if(c.bi === chimeBodies[7]){
-                        playSine({'pitch': 'A5'});
-                    }
-                    if(c.bi === chimeBodies[8]){
-                        playSine({'pitch': 'C5'});
-                    }
-                    if(c.bi === chimeBodies[9]){
-                        playSine({'pitch': 'E5'});
+                    for(var j=0; j<bodies.length; j++) {
+                        if(c.bi === bodies[j] || c.bj === bodies[j]) {
+                            // if colliding and a chime, color red
+                            if(isChime(bodies[j])) {
+                                meshes[j].children[0].material.color.r = 1;
+                                meshes[j].children[0].material.color.g = 0;
+                                meshes[j].children[0].material.color.b = 0;
+                            }
+                        }
                     }
                     
-                    // for(var j=0; j<chimeBodies.length; j++) {
-                    //     for(var k=0; k<chimeBodies.length; k++) {
-                    //         if((c.bi === bodyA && c.bj === bodyB) || (c.bi === bodyB && c.bj === bodyA)){
-                    //             return true;
-                    //         }
-                    //     }
+                    // if(c.bi === chimeBodies[0]){
+                    //     playSine({'pitch': 'A3'});
                     // }
-
-                    // if((c.bi === bodyA && c.bj === bodyB) || (c.bi === bodyB && c.bj === bodyA)){
-                    //     return true;
+                    // if(c.bi === chimeBodies[1]){
+                    //     playSine({'pitch': 'C3'});
+                    // }
+                    // if(c.bi === chimeBodies[2]){
+                    //     playSine({'pitch': 'E3'});
+                    // }
+                    // if(c.bi === chimeBodies[3]){
+                    //     playSine({'pitch': 'G3'});
+                    // }
+                    // if(c.bi === chimeBodies[4]){
+                    //     playSine({'pitch': 'B4'});
+                    // }
+                    // if(c.bi === chimeBodies[5]){
+                    //     playSine({'pitch': 'D4'});
+                    // }
+                    // if(c.bi === chimeBodies[6]){
+                    //     playSine({'pitch': 'F4'});
+                    // }
+                    // if(c.bi === chimeBodies[7]){
+                    //     playSine({'pitch': 'A5'});
+                    // }
+                    // if(c.bi === chimeBodies[8]){
+                    //     playSine({'pitch': 'C5'});
+                    // }
+                    // if(c.bi === chimeBodies[9]){
+                    //     playSine({'pitch': 'E5'});
                     // }
                 }
+            }
+
+            function isChime(body) {
+                for(var k=0; k<chimeBodies.length; k++) {
+                    if(_.isEqual(chimeBodies[k],body)) {
+                        return true;
+                    }
+                }
+                return false;
             }
 
             function addVisual(body){
@@ -418,7 +421,15 @@
                         }
                         geo.computeBoundingSphere();
                         geo.computeFaceNormals();
-                        mesh = new THREE.Mesh( geo, solidMaterial );
+                        
+                        // for each chime, separate material
+                        var newMaterial = new THREE.MeshPhongMaterial({ 
+                            color: materialColor,
+                            specular: 0x050505,
+                            shininess: 100} 
+                        );
+                        
+                        mesh = new THREE.Mesh( geo, newMaterial );
                         break;
 
                     case CANNON.Shape.types.HEIGHTFIELD:
