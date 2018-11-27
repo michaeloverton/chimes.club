@@ -1,0 +1,25 @@
+{
+  "name": "chimes.club",
+  "version": "1.0.0",
+  "description": "chimes.club",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michaeloverton/chimes.club.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/michaeloverton/chimes.club/issues"
+  },
+  "homepage": "https://github.com/michaeloverton/chimes.club#readme",
+  "dependencies": {
+    "cannon": "^0.6.2",
+    "lodash": "^4.17.11",
+    "three": "^0.98.0",
+    "web-audio-daw": "^4.2.1"
+  }
+}
