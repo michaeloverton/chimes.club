@@ -54,11 +54,30 @@
 
             var dt = 1/60;
 
+            // wad?
+            var sine = new Wad({
+                source  : 'sine',
+                volume  : 0.2,   // Peak volume can range from 0 to an arbitrarily high number, but you probably shouldn't set it higher than 1.
+                loop    : false, // If true, the audio will loop. This parameter only works for audio clips, and does nothing for oscillators. 
+                rate    : 1.0, // How fast to play an audio clip, relative to its normal speed. 2.0 is double speed, 0.5 is half speed, etc.
+                offset  : 0,     // Where in the audio clip playback begins, measured in seconds from the start of the audio clip.
+                detune  : 0,     // Set a default detune on the constructor if you don't want to set detune on <code>play()</code>. Detune is measured in cents. 100 cents is equal to 1 semitone.
+                panning : 0,   // Horizontal placement of the sound source. Possible values are from 1 to -1.
+
+                env     : {      // This is the ADSR envelope.
+                    attack  : 0.1,  // Time in seconds from onset to peak volume.  Common values for oscillators may range from 0.05 to 0.3.
+                    decay   : 0.5,  // Time in seconds from peak volume to sustain volume.
+                    sustain : 0.0,  // Sustain volume level. This is a percent of the peak volume, so sensible values are between 0 and 1.
+                    hold    : 0.0, // Time in seconds to maintain the sustain volume level. If this is not set to a lower value, oscillators must be manually stopped by calling their stop() method.
+                    release : 0.0     // Time in seconds from the end of the hold period to zero volume, or from calling stop() to zero volume.
+                }
+            });
+
             // html
             var info;
 
             // chain vars
-            var chainCount = 50;
+            var chainCount = 20;
             var chainRadius = 0.5;
             var chainMass = 1;
 
@@ -66,16 +85,16 @@
             var strikerMass = 10;
             var strikerTopRadius = 1;
             var strikerTopLength = 10;
-            var strikerBottomRadius = 3;
-            var strikerBottomLength = 4;
+            var strikerBottomRadius = 5;
+            var strikerBottomLength = 2;
             var strikerTotalLength = strikerTopLength + strikerBottomLength;
             var strikerBody = new CANNON.Body({ mass: strikerMass });
 
             // chime vars
-            var chimeCount = 10;
+            var chimeCount = 7;
             var chimeLength = 40; // height above origin = 20
-            var chimeRadius = 0.5;
-            var chimeDistance = 7;
+            var chimeRadius = 1.5;//0.5;
+            var chimeDistance = 8;
             var chimeMass = 5;
             var chimeShape = new CANNON.Cylinder(chimeRadius,chimeRadius,chimeLength,40);
 
@@ -91,6 +110,14 @@
             var bodies = [];
             var chimeBodies = []; // used for re-applying velocities
             var world;
+
+            // last played frame cache
+            // need to add collisions between each object, not just all collisions in general. collisions between separately.
+            var lastPlayedFrames = {};
+            var frameSensitivity = 90;
+            for(var i=0; i<chimeCount; i++) {
+                lastPlayedFrames[i] = 0;
+            }
 
             initCannon();
             initThree();
@@ -108,13 +135,13 @@
                 var topShape = new CANNON.Cylinder(chimeDistance+1,chimeDistance+1,0.5,40);
                 var topBody = new CANNON.Body({ mass: 0 });
                 topBody.addShape(topShape);
-                topBody.position.set(0,0,(chimeLength/2) + chainCount + 0.5)
+                topBody.position.set(0,0,(chimeLength/2) + chainCount + chainRadius)
                 world.addBody(topBody);
                 bodies.push(topBody);
                 addVisual(topBody);
 
                 // set up striker
-                strikerBody.position.set(0,0,0);
+                strikerBody.position.set(0,0,-5); // why is it off by 5?
                 var strikerTopShape = new CANNON.Cylinder(strikerTopRadius,strikerTopRadius,strikerTopLength,40);
                 var strikerBottomShape = new CANNON.Cylinder(strikerBottomRadius,strikerBottomRadius,strikerBottomLength,40);
                 strikerBody.addShape(strikerTopShape, new CANNON.Vec3( 0, 0, (strikerTopLength/2) + (strikerBottomLength/2)));
@@ -139,7 +166,8 @@
                     
                     // for first chain link, attach striker
                     if(j == 0) {
-                        var cc = new CANNON.PointToPointConstraint(strikerBody,new CANNON.Vec3(0,0,(strikerTotalLength/2)+chainRadius),chainBody,new CANNON.Vec3(0,0,0));
+                        var strikerChainDistance = (strikerTotalLength/2)+chainRadius+5;
+                        var cc = new CANNON.PointToPointConstraint(strikerBody,new CANNON.Vec3(0,0,(strikerTotalLength/2)+chainRadius+5),chainBody,new CANNON.Vec3(0,0,0)); // off by 5 again
                         world.addConstraint(cc);
                     }
                     // for last, attach to top and previous -- this can be made more efficient. repeated code
@@ -160,8 +188,8 @@
 
                 }
 
-                strikerBody.velocity.x = 30 * Math.random(); 
-                strikerBody.velocity.y = 30 * Math.random();
+                // strikerBody.velocity.x = 30 * Math.random(); 
+                // strikerBody.velocity.y = 30 * Math.random();
 
                 // create chimes
                 world.solver.iterations = chimeCount; // To be able to propagate force throw the chain of N spheres, we need at least N solver iterations.
@@ -218,8 +246,8 @@
 
                     }
 
-                    // chimeBody.velocity.x = 30 * Math.random(); 
-                    // chimeBody.velocity.y = 30 * Math.random();
+                    chimeBody.velocity.x = 30 * Math.random(); 
+                    chimeBody.velocity.y = 30 * Math.random();
 
                 }
 
@@ -231,8 +259,8 @@
                 document.body.appendChild( container );
 
                 // scene
-                scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
-                //scene.fog = new THREE.Fog( 0x000000, 1000, FAR );
+                //scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
+                scene.fog = new THREE.Fog( 0x000000, 1000, FAR );
 
                 // camera
                 camera = new THREE.PerspectiveCamera( 24, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
@@ -261,6 +289,7 @@
                 ambient = new THREE.AmbientLight( 0x000000 );
                 scene.add( ambient );
 
+                //light = new THREE.SpotLight( 0xffffff );
                 light = new THREE.SpotLight( 0xffffff );
                 light.position.set( 30, 30, 40 );
                 light.target.position.set( 0, 0, 0 );
@@ -309,25 +338,25 @@
                 renderer.setSize( window.innerWidth, window.innerHeight );
             }
 
-            var frameCount = 1;
+            var frame = 0;
             function animate() {
-                checkBodyContacts();
+                checkBodyContacts(frame);
                 // give the chimes a push every 10(?) secs
-                frameCount++;
-                if(frameCount % 1200 == 0) {
-                    strikerBody.velocity.x = 30 * Math.random(); 
-                    strikerBody.velocity.y = 30 * Math.random();
-                    // for(var i=0; i<chimeBodies.length; i++) {
-                    //     chimeBodies[i].velocity.x = 30 * Math.random(); 
-                    //     chimeBodies[i].velocity.y = 30 * Math.random();
-                    // }
-                    frameCount = 1;
+                if(frame % 1200 == 0) {
+                    strikerBody.velocity.x = 50 * Math.random(); 
+                    strikerBody.velocity.y = 50 * Math.random();
+                    //frameCount = 1;
+                }
+                // prevent overflow?
+                if(frame % 1200000000 == 0) {
+                    frame = 0;
                 }
 
                 requestAnimationFrame( animate );
                 controls.update();
                 world.step(dt);
                 render();
+                frame++;
             }
 
             function render() {                
@@ -338,7 +367,7 @@
                 renderer.render( scene, camera );
             }
 
-            function checkBodyContacts(){
+            function checkBodyContacts(frame){
                 info.innerHTML = 'chimes.club, contacts: ' + world.contacts.length;
 
                 // reset colors
@@ -349,6 +378,7 @@
                 }
                 
                 // reverse these for loops?
+                var collidingBodies = bodies.slice();
                 for(var i=0; i<world.contacts.length; i++){
                     var c = world.contacts[i];
                     for(var j=0; j<bodies.length; j++) {
@@ -361,22 +391,77 @@
                             }
                         }
                     }
+
+                    // console.log(collisionCache);
                     
-                    // if(c.bi === chimeBodies[0]){
-                    //     playSine({'pitch': 'A3'});
-                    // }
-                    // if(c.bi === chimeBodies[1]){
-                    //     playSine({'pitch': 'C3'});
-                    // }
-                    // if(c.bi === chimeBodies[2]){
-                    //     playSine({'pitch': 'E3'});
-                    // }
-                    // if(c.bi === chimeBodies[3]){
-                    //     playSine({'pitch': 'G3'});
-                    // }
-                    // if(c.bi === chimeBodies[4]){
-                    //     playSine({'pitch': 'B4'});
-                    // }
+                    if(c.bi === chimeBodies[0] || c.bj === chimeBodies[0]){
+                    // if(c.bi === bodies[56] || c.bj === bodies[56]){
+                        
+                        
+                        if(frame - lastPlayedFrames[0] > frameSensitivity) {
+                            console.log("playing C4")
+                            playSine({'pitch': 'A4'});
+                            lastPlayedFrames[0] = frame;
+                        }
+                        
+                    }
+                    if(c.bi === chimeBodies[1] || c.bj === chimeBodies[1]){
+                    // if(c.bi === bodies[97] || c.bj === bodies[97]){
+                        
+                        if(frame - lastPlayedFrames[1] > frameSensitivity) {
+                            console.log("playing D4")
+                            playSine({'pitch': 'C4'});
+                            lastPlayedFrames[1] = frame;
+                        }
+                        //playSine({'pitch': 'D4'});
+                        // collisionCache['D4'] = chimeBodies[1];
+                    }
+                    if(c.bi === chimeBodies[2] || c.bj === chimeBodies[2]){
+                    // if(c.bi === bodies[138] || c.bj === bodies[138]){
+                        //playSine({'pitch': 'E4'});
+                        if(frame - lastPlayedFrames[2] > frameSensitivity) {
+                            console.log("playing E4")
+                            playSine({'pitch': 'E4'});
+                            lastPlayedFrames[2] = frame;
+                        }
+                        // collisionCache['E4'] = chimeBodies[2];
+                    }
+                    if(c.bi === chimeBodies[3] || c.bj === chimeBodies[3]){
+                        //playSine({'pitch': 'F4'});
+                        if(frame - lastPlayedFrames[3] > frameSensitivity) {
+                            console.log("playing G4")
+                            playSine({'pitch': 'G4'});
+                            lastPlayedFrames[3] = frame;
+                        }
+                        // collisionCache['F4'] = chimeBodies[3];
+                    }
+                    if(c.bi === chimeBodies[4] || c.bj === chimeBodies[4]){
+                        //playSine({'pitch': 'G4'});
+                        if(frame - lastPlayedFrames[4] > frameSensitivity) {
+                            console.log("playing C4")
+                            playSine({'pitch': 'C5'});
+                            lastPlayedFrames[4] = frame;
+                        }
+                        // collisionCache['G4'] = chimeBodies[4];
+                    }
+                    if(c.bi === chimeBodies[5] || c.bj === chimeBodies[5]){
+                        //playSine({'pitch': 'G4'});
+                        if(frame - lastPlayedFrames[5] > frameSensitivity) {
+                            console.log("playing D5")
+                            playSine({'pitch': 'D5'});
+                            lastPlayedFrames[5] = frame;
+                        }
+                        // collisionCache['G4'] = chimeBodies[4];
+                    }
+                    if(c.bi === chimeBodies[6] || c.bj === chimeBodies[6]){
+                        //playSine({'pitch': 'G4'});
+                        if(frame - lastPlayedFrames[6] > frameSensitivity) {
+                            console.log("playing E5")
+                            playSine({'pitch': 'E5'});
+                            lastPlayedFrames[6] = frame;
+                        }
+                        // collisionCache['G4'] = chimeBodies[4];
+                    }
                     // if(c.bi === chimeBodies[5]){
                     //     playSine({'pitch': 'D4'});
                     // }
@@ -393,6 +478,8 @@
                     //     playSine({'pitch': 'E5'});
                     // }
                 }
+
+                console.log(lastPlayedFrames);
             }
 
             function isChime(body) {
@@ -578,34 +665,9 @@
 
                 return obj;
             };
-
+            
+            // THE SPEED OF IMPACT SHOULD DETERMINE VOLUME
             function playSine(pitch) {
-                var sine = new Wad({
-                    source  : 'sine',
-                    volume  : 0.2,   // Peak volume can range from 0 to an arbitrarily high number, but you probably shouldn't set it higher than 1.
-                    loop    : false, // If true, the audio will loop. This parameter only works for audio clips, and does nothing for oscillators. 
-                    rate    : 1.0, // How fast to play an audio clip, relative to its normal speed. 2.0 is double speed, 0.5 is half speed, etc.
-                    offset  : 0,     // Where in the audio clip playback begins, measured in seconds from the start of the audio clip.
-                    detune  : 0,     // Set a default detune on the constructor if you don't want to set detune on <code>play()</code>. Detune is measured in cents. 100 cents is equal to 1 semitone.
-                    panning : -.5,   // Horizontal placement of the sound source. Possible values are from 1 to -1.
-
-                    env     : {      // This is the ADSR envelope.
-                        attack  : 0.01,  // Time in seconds from onset to peak volume.  Common values for oscillators may range from 0.05 to 0.3.
-                        decay   : 0.5,  // Time in seconds from peak volume to sustain volume.
-                        sustain : 0.0,  // Sustain volume level. This is a percent of the peak volume, so sensible values are between 0 and 1.
-                        hold    : 0.0, // Time in seconds to maintain the sustain volume level. If this is not set to a lower value, oscillators must be manually stopped by calling their stop() method.
-                        release : 0.0     // Time in seconds from the end of the hold period to zero volume, or from calling stop() to zero volume.
-                    },
-                    filter  : {
-                        type      : 'lowpass', // What type of filter is applied.
-                        frequency : 600,       // The frequency, in hertz, to which the filter is applied.
-                        q         : 1,         // Q-factor.  No one knows what this does. The default value is 1. Sensible values are from 0 to 10.
-                        env       : {          // Filter envelope.
-                            frequency : 800, // If this is set, filter frequency will slide from filter.frequency to filter.env.frequency when a note is triggered.
-                            attack    : 0.5  // Time in seconds for the filter frequency to slide from filter.frequency to filter.env.frequency
-                        }
-                    }
-                });
                 sine.play(pitch);
             }
 
