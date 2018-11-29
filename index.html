@@ -73,6 +73,8 @@
                 }
             });
 
+            var chimeSounds = {}; // map of chime body index -> note
+
             // html
             var info;
 
@@ -108,19 +110,21 @@
 
             var meshes = [];
             var bodies = [];
-            var chimeBodies = []; // used for re-applying velocities
+            var chimeIndices = []; // indices of chimes in bodies array
             var world;
 
             // last played frame cache
             // need to add collisions between each object, not just all collisions in general. collisions between separately.
             var lastPlayedFrames = {};
             var frameSensitivity = 90;
-            for(var i=0; i<chimeCount; i++) {
-                lastPlayedFrames[i] = 0;
-            }
 
             initCannon();
             initThree();
+            initWad();
+
+            console.log(chimeIndices);
+            console.log(chimeSounds);
+
             animate();
 
             function initCannon(){
@@ -188,9 +192,6 @@
 
                 }
 
-                // strikerBody.velocity.x = 30 * Math.random(); 
-                // strikerBody.velocity.y = 30 * Math.random();
-
                 // create chimes
                 world.solver.iterations = chimeCount; // To be able to propagate force throw the chain of N spheres, we need at least N solver iterations.
                 for(var i=0; i<chimeCount; i++){
@@ -208,7 +209,7 @@
                     chimeBody.position.set(xChimePos, yChimePos, zChimePos)
                     world.addBody(chimeBody);
                     bodies.push(chimeBody);
-                    chimeBodies.push(chimeBody);
+                    chimeIndices.push(bodies.length-1); // track index of chime in bodies array
                     addVisual(chimeBody);
 
                     var lastChainBody = null;
@@ -331,6 +332,22 @@
                 container.appendChild( info );
             }
 
+            function initWad() {
+                // set up chime sounds
+                chimeSounds[chimeIndices[0]] = 'A4';
+                chimeSounds[chimeIndices[1]] = 'C4';
+                chimeSounds[chimeIndices[2]] = 'E4';
+                chimeSounds[chimeIndices[3]] = 'G4';
+                chimeSounds[chimeIndices[4]] = 'C5';
+                chimeSounds[chimeIndices[5]] = 'D5';
+                chimeSounds[chimeIndices[6]] = 'E5';
+
+                // initialize lastPlayedFrames to 0 for each chime
+                for(var i=0; i<chimeIndices.length; i++) {
+                    lastPlayedFrames[chimeIndices[i]] = 0;
+                }
+            }
+
             function onWindowResize() {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -345,7 +362,6 @@
                 if(frame % 1200 == 0) {
                     strikerBody.velocity.x = 50 * Math.random(); 
                     strikerBody.velocity.y = 50 * Math.random();
-                    //frameCount = 1;
                 }
                 // prevent overflow?
                 if(frame % 1200000000 == 0) {
@@ -384,7 +400,7 @@
                     for(var j=0; j<bodies.length; j++) {
                         if(c.bi === bodies[j] || c.bj === bodies[j]) {
                             // if colliding and a chime, color red
-                            if(isChime(bodies[j])) {
+                            if(chimeIndices.includes(j)) {
                                 meshes[j].children[0].material.color.r = 1;
                                 meshes[j].children[0].material.color.g = 0;
                                 meshes[j].children[0].material.color.b = 0;
@@ -392,103 +408,19 @@
                         }
                     }
 
-                    // console.log(collisionCache);
-                    
-                    if(c.bi === chimeBodies[0] || c.bj === chimeBodies[0]){
-                    // if(c.bi === bodies[56] || c.bj === bodies[56]){
-                        
-                        
-                        if(frame - lastPlayedFrames[0] > frameSensitivity) {
-                            console.log("playing C4")
-                            playSine({'pitch': 'A4'});
-                            lastPlayedFrames[0] = frame;
+                    for(var k=0; k<chimeIndices.length; k++) {
+                        var chimeIndex = chimeIndices[k];
+                        // if body is a chime
+                        if(c.bi === bodies[chimeIndex] || c.bj === bodies[chimeIndex]){
+                            // if sound has not played in last -frameSensitivity- frames, then play sound
+                            if(frame - lastPlayedFrames[chimeIndex] > frameSensitivity) {
+                                playSine({'pitch': chimeSounds[chimeIndex]});
+                                lastPlayedFrames[chimeIndex] = frame;
+                            }
                         }
-                        
                     }
-                    if(c.bi === chimeBodies[1] || c.bj === chimeBodies[1]){
-                    // if(c.bi === bodies[97] || c.bj === bodies[97]){
-                        
-                        if(frame - lastPlayedFrames[1] > frameSensitivity) {
-                            console.log("playing D4")
-                            playSine({'pitch': 'C4'});
-                            lastPlayedFrames[1] = frame;
-                        }
-                        //playSine({'pitch': 'D4'});
-                        // collisionCache['D4'] = chimeBodies[1];
-                    }
-                    if(c.bi === chimeBodies[2] || c.bj === chimeBodies[2]){
-                    // if(c.bi === bodies[138] || c.bj === bodies[138]){
-                        //playSine({'pitch': 'E4'});
-                        if(frame - lastPlayedFrames[2] > frameSensitivity) {
-                            console.log("playing E4")
-                            playSine({'pitch': 'E4'});
-                            lastPlayedFrames[2] = frame;
-                        }
-                        // collisionCache['E4'] = chimeBodies[2];
-                    }
-                    if(c.bi === chimeBodies[3] || c.bj === chimeBodies[3]){
-                        //playSine({'pitch': 'F4'});
-                        if(frame - lastPlayedFrames[3] > frameSensitivity) {
-                            console.log("playing G4")
-                            playSine({'pitch': 'G4'});
-                            lastPlayedFrames[3] = frame;
-                        }
-                        // collisionCache['F4'] = chimeBodies[3];
-                    }
-                    if(c.bi === chimeBodies[4] || c.bj === chimeBodies[4]){
-                        //playSine({'pitch': 'G4'});
-                        if(frame - lastPlayedFrames[4] > frameSensitivity) {
-                            console.log("playing C4")
-                            playSine({'pitch': 'C5'});
-                            lastPlayedFrames[4] = frame;
-                        }
-                        // collisionCache['G4'] = chimeBodies[4];
-                    }
-                    if(c.bi === chimeBodies[5] || c.bj === chimeBodies[5]){
-                        //playSine({'pitch': 'G4'});
-                        if(frame - lastPlayedFrames[5] > frameSensitivity) {
-                            console.log("playing D5")
-                            playSine({'pitch': 'D5'});
-                            lastPlayedFrames[5] = frame;
-                        }
-                        // collisionCache['G4'] = chimeBodies[4];
-                    }
-                    if(c.bi === chimeBodies[6] || c.bj === chimeBodies[6]){
-                        //playSine({'pitch': 'G4'});
-                        if(frame - lastPlayedFrames[6] > frameSensitivity) {
-                            console.log("playing E5")
-                            playSine({'pitch': 'E5'});
-                            lastPlayedFrames[6] = frame;
-                        }
-                        // collisionCache['G4'] = chimeBodies[4];
-                    }
-                    // if(c.bi === chimeBodies[5]){
-                    //     playSine({'pitch': 'D4'});
-                    // }
-                    // if(c.bi === chimeBodies[6]){
-                    //     playSine({'pitch': 'F4'});
-                    // }
-                    // if(c.bi === chimeBodies[7]){
-                    //     playSine({'pitch': 'A5'});
-                    // }
-                    // if(c.bi === chimeBodies[8]){
-                    //     playSine({'pitch': 'C5'});
-                    // }
-                    // if(c.bi === chimeBodies[9]){
-                    //     playSine({'pitch': 'E5'});
-                    // }
                 }
 
-                console.log(lastPlayedFrames);
-            }
-
-            function isChime(body) {
-                for(var k=0; k<chimeBodies.length; k++) {
-                    if(_.isEqual(chimeBodies[k],body)) {
-                        return true;
-                    }
-                }
-                return false;
             }
 
             function addVisual(body){
