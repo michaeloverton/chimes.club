@@ -78,10 +78,10 @@
             var strikerBody = new CANNON.Body({ mass: strikerMass });
 
             // chime vars
-            var chimeCount = 7;
+            var chimeCount = 5;
             var chimeLength = 40; // height above origin = 20
             var chimeRadius = 1.5;//0.5;
-            var chimeDistance = 8;
+            var chimeDistance = 9;
             var chimeMass = 5;
             var chimeShape = new CANNON.Cylinder(chimeRadius,chimeRadius,chimeLength,40);
 
@@ -235,8 +235,18 @@
 
                     }
 
-                    chimeBody.velocity.x = 30 * Math.random(); 
-                    chimeBody.velocity.y = 30 * Math.random();
+                    // set initial chime velocities
+                    var xDir = 1;
+                    var yDir = 1;
+                    if(Math.random() > 0.5) {
+                        xDir = -1;
+                    }
+                    if(Math.random() > 0.5) {
+                        console.log("neg y dir");
+                        yDir = -1;
+                    }
+                    chimeBody.velocity.x = xDir * 30 * Math.random(); 
+                    chimeBody.velocity.y = yDir * 30 * Math.random();
 
                 }
 
@@ -248,8 +258,8 @@
                 document.body.appendChild( container );
 
                 // scene
-                //scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
-                scene.fog = new THREE.Fog( 0x000000, 1000, FAR );
+                scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
+                //scene.fog = new THREE.Fog( 0x000000, 1000, FAR );
 
                 // camera
                 camera = new THREE.PerspectiveCamera( 24, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
@@ -316,7 +326,7 @@
                 info.style.width = '100%';
                 info.style.textAlign = 'center';
                 info.style.color = 'white';
-                info.innerHTML = 'chimes.club, contacts: 0';
+                info.innerHTML = 'chimes.club';
                 container.appendChild( info );
             }
 
@@ -354,17 +364,24 @@
 
                 hiss = new Wad({
                     source : './audio/tapenoise.wav',
-                    volume: 0.7,
+                    volume: 1.3,
                     rate: 0.5,
                     loop: true,
+                    env     : {      // This is the ADSR envelope.
+                        attack  : 1.0,  // Time in seconds from onset to peak volume.  Common values for oscillators may range from 0.05 to 0.3.
+                        decay   : 0.0,  // Time in seconds from peak volume to sustain volume.
+                        sustain : 1.0,  // Sustain volume level. This is a percent of the peak volume, so sensible values are between 0 and 1.
+                        hold    : 10000.0, // Time in seconds to maintain the sustain volume level. If this is not set to a lower value, oscillators must be manually stopped by calling their stop() method.
+                        release : 0     // Time in seconds from the end of the hold period to zero volume, or from calling stop() to zero volume.
+                    },
                     filter  : {
-                        frequency : 1300,
-                        q         : 2,
+                        frequency : 2000,
+                        q         : 3,
                     },
-                    reverb  : {
-                        wet     : 1,                                            // Volume of the reverberations.
-                        impulse : './node_modules/tunajs/impulses/impulse_rev.wav' // A URL for an impulse response file, if you do not want to use the default impulse response.
-                    },
+                    // reverb  : {
+                    //     wet     : 1,                                            // Volume of the reverberations.
+                    //     impulse : './node_modules/tunajs/impulses/impulse_rev.wav' // A URL for an impulse response file, if you do not want to use the default impulse response.
+                    // },
                     delay   : {
                         delayTime : .5,  // Time in seconds between each delayed playback.
                         wet       : .3, // Relative volume change between the original sound and the first delayed playback.
@@ -412,11 +429,25 @@
                 checkBodyContacts(frame);
                 // give the chimes a push every 10(?) secs
                 if(frame % 1200 == 0) {
-                    strikerBody.velocity.x = 50 * Math.random(); 
-                    strikerBody.velocity.y = 50 * Math.random();
+                    var xDir = 1;
+                    var yDir = 1;
+                    if(Math.random() > 0.5) {
+                        xDir = -1;
+                    }
+                    if(Math.random() > 0.5) {
+                        yDir = -1;
+                    }
+                    strikerBody.velocity.x = xDir * 30 * Math.random(); 
+                    strikerBody.velocity.y = yDir * 30 * Math.random();
+                    
+                    for(var i=0; i<chimeIndices.length; i++) {
+                        var chimeBody = bodies[chimeIndices[i]];
+                        chimeBody.velocity.x = xDir * 20 * Math.random(); 
+                        chimeBody.velocity.y = yDir * 20 * Math.random();
+                    }
                 }
                 // prevent overflow?
-                if(frame % 1200000000 == 0) {
+                if(frame % 12000000 == 0) {
                     frame = 0;
                 }
 
@@ -436,9 +467,6 @@
             }
 
             function checkBodyContacts(frame){
-                //console.log(lastPlayedFrames)
-                info.innerHTML = 'chimes.club, contacts: ' + world.contacts.length;
-
                 // reset colors
                 for(var j=0; j<bodies.length; j++) {
                     meshes[j].children[0].material.color.r = 0.1;
