@@ -90,6 +90,7 @@
             var strikerBottomRadius = 5;
             var strikerBottomLength = 2;
             var strikerTotalLength = strikerTopLength + strikerBottomLength;
+            var strikerIndex; // the index of the striker in the bodies array
             var strikerBody = new CANNON.Body({ mass: strikerMass });
 
             // chime vars
@@ -152,6 +153,9 @@
                 strikerBody.addShape(strikerBottomShape, new CANNON.Vec3(0,0,0));
                 world.addBody(strikerBody);
                 bodies.push(strikerBody);
+                
+                strikerIndex = bodies.length-1;
+                console.log("INDEX: " + strikerIndex);
                 addVisual(strikerBody);
 
                 // set up striker chain
@@ -343,9 +347,26 @@
                 chimeSounds[chimeIndices[6]] = 'E5';
 
                 // initialize lastPlayedFrames to 0 for each chime
-                for(var i=0; i<chimeIndices.length; i++) {
-                    lastPlayedFrames[chimeIndices[i]] = 0;
+                for(var i=0; i<=chimeIndices.length; i++) {
+                    // add the striker body index
+                    if(i==chimeIndices.length) {
+                        lastPlayedFrames[strikerIndex] = {};
+                        for(var j=0; j<chimeIndices.length; j++) {
+                            lastPlayedFrames[strikerIndex][chimeIndices[j]] = 0;
+                        }
+                        lastPlayedFrames[strikerIndex][strikerIndex] = 0;
+                    }
+                    else {
+                        lastPlayedFrames[chimeIndices[i]] = {};
+                        for(var j=0; j<chimeIndices.length; j++) {
+                            lastPlayedFrames[chimeIndices[i]][chimeIndices[j]] = 0;
+                        }
+                        for(var j=0; j<=chimeIndices.length; j++) {
+                            lastPlayedFrames[chimeIndices[i]][strikerIndex] = 0;
+                        }
+                    }
                 }
+                //console.log(lastPlayedFrames);
             }
 
             function onWindowResize() {
@@ -384,6 +405,7 @@
             }
 
             function checkBodyContacts(frame){
+                //console.log(lastPlayedFrames)
                 info.innerHTML = 'chimes.club, contacts: ' + world.contacts.length;
 
                 // reset colors
@@ -418,7 +440,55 @@
                                 lastPlayedFrames[chimeIndex] = frame;
                             }
                         }
+                        
+                        // if first body is chime
+                        if(c.bi === bodies[chimeIndex]){
+                            // if second body is striker
+                            if(c.bj === bodies[strikerIndex]) {
+                                if(frame - lastPlayedFrames[chimeIndex][strikerIndex] > frameSensitivity) {
+                                    playSine({'pitch': chimeSounds[chimeIndex]});
+                                    lastPlayedFrames[chimeIndex][strikerIndex] = frame;
+                                }
+                            }
+                            else {
+                                for(var l=0; l<chimeIndices.length; l++) {
+                                    var chimeIndex2 = chimeIndices[l];
+                                    // if second body is different chime
+                                    if(chimeIndex2 != chimeIndex && c.bj === bodies[chimeIndex2]) {
+                                        // if sound has not played in last -frameSensitivity- frames, then play sound
+                                        if(frame - lastPlayedFrames[chimeIndex][chimeIndex2] > frameSensitivity) {
+                                            playSine({'pitch': chimeSounds[chimeIndex]});
+                                            lastPlayedFrames[chimeIndex][chimeIndex2] = frame;
+                                        }
+                                    }                                
+                                }
+                            }
+                        }
+                        // if second body is chime
+                        else if(c.bj === bodies[chimeIndex]){
+                            // if first body is striker
+                            if(c.bi === bodies[strikerIndex]) {
+                                if(frame - lastPlayedFrames[strikerIndex][chimeIndex] > frameSensitivity) {
+                                    playSine({'pitch': chimeSounds[chimeIndex]});
+                                    lastPlayedFrames[strikerIndex][chimeIndex] = frame;
+                                }
+                            }
+                            else {
+                                for(var l=0; l<chimeIndices.length; l++) {
+                                    var chimeIndex2 = chimeIndices[l];
+                                    // if first body is different chime
+                                    if(chimeIndex2 != chimeIndex && c.bi === bodies[chimeIndex2]) {
+                                        // if sound has not played in last -frameSensitivity- frames, then play sound
+                                        if(frame - lastPlayedFrames[chimeIndex2][chimeIndex] > frameSensitivity) {
+                                            playSine({'pitch': chimeSounds[chimeIndex]});
+                                            lastPlayedFrames[chimeIndex2][chimeIndex] = frame;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
+                        
                 }
 
             }
