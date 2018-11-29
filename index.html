@@ -54,25 +54,9 @@
 
             var dt = 1/60;
 
-            // wad?
-            var sine = new Wad({
-                source  : 'sine',
-                volume  : 0.2,   // Peak volume can range from 0 to an arbitrarily high number, but you probably shouldn't set it higher than 1.
-                loop    : false, // If true, the audio will loop. This parameter only works for audio clips, and does nothing for oscillators. 
-                rate    : 1.0, // How fast to play an audio clip, relative to its normal speed. 2.0 is double speed, 0.5 is half speed, etc.
-                offset  : 0,     // Where in the audio clip playback begins, measured in seconds from the start of the audio clip.
-                detune  : 0,     // Set a default detune on the constructor if you don't want to set detune on <code>play()</code>. Detune is measured in cents. 100 cents is equal to 1 semitone.
-                panning : 0,   // Horizontal placement of the sound source. Possible values are from 1 to -1.
-
-                env     : {      // This is the ADSR envelope.
-                    attack  : 0.1,  // Time in seconds from onset to peak volume.  Common values for oscillators may range from 0.05 to 0.3.
-                    decay   : 0.5,  // Time in seconds from peak volume to sustain volume.
-                    sustain : 0.0,  // Sustain volume level. This is a percent of the peak volume, so sensible values are between 0 and 1.
-                    hold    : 0.0, // Time in seconds to maintain the sustain volume level. If this is not set to a lower value, oscillators must be manually stopped by calling their stop() method.
-                    release : 0.0     // Time in seconds from the end of the hold period to zero volume, or from calling stop() to zero volume.
-                }
-            });
-
+            // wad vars
+            var sine;
+            var hiss;
             var chimeSounds = {}; // map of chime body index -> note
 
             // html
@@ -361,12 +345,59 @@
                         for(var j=0; j<chimeIndices.length; j++) {
                             lastPlayedFrames[chimeIndices[i]][chimeIndices[j]] = 0;
                         }
+                        // add striker body to each chime row
                         for(var j=0; j<=chimeIndices.length; j++) {
                             lastPlayedFrames[chimeIndices[i]][strikerIndex] = 0;
                         }
                     }
                 }
-                //console.log(lastPlayedFrames);
+
+                hiss = new Wad({
+                    source : './audio/tapenoise.wav',
+                    volume: 0.7,
+                    rate: 0.5,
+                    loop: true,
+                    filter  : {
+                        frequency : 1300,
+                        q         : 2,
+                    },
+                    reverb  : {
+                        wet     : 1,                                            // Volume of the reverberations.
+                        impulse : './node_modules/tunajs/impulses/impulse_rev.wav' // A URL for an impulse response file, if you do not want to use the default impulse response.
+                    },
+                    delay   : {
+                        delayTime : .5,  // Time in seconds between each delayed playback.
+                        wet       : .3, // Relative volume change between the original sound and the first delayed playback.
+                        feedback  : .4, // Relative volume change between each delayed playback and the next. 
+                    }
+                });
+                hiss.play();
+
+                sine = new Wad({
+                    source  : 'sine',
+                    volume  : 0.2,   // Peak volume can range from 0 to an arbitrarily high number, but you probably shouldn't set it higher than 1.
+                    loop    : false, // If true, the audio will loop. This parameter only works for audio clips, and does nothing for oscillators. 
+                    rate    : 1.0, // How fast to play an audio clip, relative to its normal speed. 2.0 is double speed, 0.5 is half speed, etc.
+                    offset  : 0,     // Where in the audio clip playback begins, measured in seconds from the start of the audio clip.
+                    detune  : 0,     // Set a default detune on the constructor if you don't want to set detune on <code>play()</code>. Detune is measured in cents. 100 cents is equal to 1 semitone.
+                    panning : 0,   // Horizontal placement of the sound source. Possible values are from 1 to -1.
+                    env     : {      // This is the ADSR envelope.
+                        attack  : 0.1,  // Time in seconds from onset to peak volume.  Common values for oscillators may range from 0.05 to 0.3.
+                        decay   : 0.5,  // Time in seconds from peak volume to sustain volume.
+                        sustain : 0.0,  // Sustain volume level. This is a percent of the peak volume, so sensible values are between 0 and 1.
+                        hold    : 0.0, // Time in seconds to maintain the sustain volume level. If this is not set to a lower value, oscillators must be manually stopped by calling their stop() method.
+                        release : 0.0     // Time in seconds from the end of the hold period to zero volume, or from calling stop() to zero volume.
+                    },
+                    // reverb  : {
+                    //     wet     : 1,                                            // Volume of the reverberations.
+                    //     impulse : './node_modules/tunajs/impulses/Sweetspot1M.wav' // A URL for an impulse response file, if you do not want to use the default impulse response.
+                    // },
+                    delay   : {
+                        delayTime : .5,  // Time in seconds between each delayed playback.
+                        wet       : .3, // Relative volume change between the original sound and the first delayed playback.
+                        feedback  : .4, // Relative volume change between each delayed playback and the next. 
+                    },
+                });
             }
 
             function onWindowResize() {
