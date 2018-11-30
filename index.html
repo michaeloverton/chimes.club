@@ -85,6 +85,9 @@
             var chimeMass = 5;
             var chimeShape = new CANNON.Cylinder(chimeRadius,chimeRadius,chimeLength,40);
 
+            // second tier chimes
+            var secondTierChimeCount = 7;
+
             // shared material
             var materialColor = 0xdddddd;
             var solidMaterial = new THREE.MeshPhongMaterial({ 
@@ -106,17 +109,13 @@
             initCannon();
             initThree();
             initWad();
-
-            console.log(chimeIndices);
-            console.log(chimeSounds);
-
             animate();
 
             function initCannon(){
                 world = new CANNON.World();
                 world.gravity.set(0,0,-40);
                 world.broadphase = new CANNON.NaiveBroadphase();
-                world.solver.iterations = 10;
+                world.solver.iterations = 20;
                 world.quatNormalizeFast = false;
                 world.quatNormalizeSkip = 0;
 
@@ -181,7 +180,7 @@
                 }
 
                 // create chimes
-                world.solver.iterations = chimeCount; // To be able to propagate force throw the chain of N spheres, we need at least N solver iterations.
+                //world.solver.iterations = chainCount + chainCount; // To be able to propagate force throw the chain of N spheres, we need at least N solver iterations.
                 for(var i=0; i<chimeCount; i++){
                     
                     // create chime
@@ -232,23 +231,67 @@
 
                         // set last link to current link
                         lastChainBody = chainBody;
-
                     }
-
-                    // set initial chime velocities
-                    var xDir = 1;
-                    var yDir = 1;
-                    if(Math.random() > 0.5) {
-                        xDir = -1;
-                    }
-                    if(Math.random() > 0.5) {
-                        console.log("neg y dir");
-                        yDir = -1;
-                    }
-                    chimeBody.velocity.x = xDir * 30 * Math.random(); 
-                    chimeBody.velocity.y = yDir * 30 * Math.random();
 
                 }
+
+                /*
+                // second tier chimes
+                var secondTierChimeShape = new CANNON.Cylinder(chimeRadius,chimeRadius,30,40);
+                for(var i=0; i<secondTierChimeCount; i++){
+                    
+                    // create chime
+                    var chimeBody = new CANNON.Body({ mass: chimeMass });
+                    chimeBody.addShape(secondTierChimeShape);
+                    chimeBody.linearDamping=0.01; // Damping makes the movement slow down with time
+                    chimeBody.angularDamping=0.01;
+                    
+                    var xChimePos = (9+chimeDistance)*Math.sin( (i/secondTierChimeCount) * (2*Math.PI) );
+                    var yChimePos = (9+chimeDistance)*Math.cos( (i/secondTierChimeCount) * (2*Math.PI) );
+                    var zChimePos = 5;
+                    
+                    chimeBody.position.set(xChimePos, yChimePos, zChimePos)
+                    world.addBody(chimeBody);
+                    bodies.push(chimeBody);
+                    chimeIndices.push(bodies.length-1); // track index of chime in bodies array
+                    addVisual(chimeBody);
+
+                    var lastChainBody = null;
+                    for(var j=0; j<chainCount; j++) {
+                        var chainShape = new CANNON.Sphere(chainRadius);
+                        var chainBody = new CANNON.Body({ mass: 1 });
+                        chainBody.addShape(chainShape);
+                        chainBody.linearDamping=0.01; // Damping makes the movement slow down with time
+                        chainBody.angularDamping=0.01;
+                        chainBody.position.set(xChimePos, yChimePos, (chimeLength/2)+chainRadius+j);
+                        world.addBody(chainBody);
+                        bodies.push(chainBody);
+                        addVisual(chainBody);
+                        
+                        // for first chain link, attach chime
+                        if(j == 0) {
+                            var cc = new CANNON.PointToPointConstraint(chimeBody,new CANNON.Vec3(0,0,((chimeLength-10)/2)+chainRadius),chainBody,new CANNON.Vec3(0,0,0));
+                            world.addConstraint(cc);
+                        }
+                        // for last, attach to top and previous -- this can be made more efficient. repeated code
+                        else if(j == chainCount-1) {
+                            var tc = new CANNON.PointToPointConstraint(chainBody,new CANNON.Vec3(0,0,1),topBody,new CANNON.Vec3(xChimePos,yChimePos,0));
+                            var lc = new CANNON.PointToPointConstraint(lastChainBody,new CANNON.Vec3(0,0,1),chainBody,new CANNON.Vec3(0,0,0));
+                            world.addConstraint(lc);
+                            world.addConstraint(tc);
+                        }
+                        // for others, attach to each other
+                        else {
+                            var lc = new CANNON.PointToPointConstraint(lastChainBody,new CANNON.Vec3(0,0,1),chainBody,new CANNON.Vec3(0,0,0));
+                            world.addConstraint(lc);
+                        }
+
+                        // set last link to current link
+                        lastChainBody = chainBody;
+                    }
+
+                }
+                */
 
             }
 
@@ -458,7 +501,8 @@
                 frame++;
             }
 
-            function render() {                
+            function render() {
+                // mesh index must match body index            
                 for(var i = 0; i < meshes.length; i++) {
                     meshes[i].position.copy(bodies[i].position);
                     meshes[i].quaternion.copy(bodies[i].quaternion)
@@ -467,11 +511,13 @@
             }
 
             function checkBodyContacts(frame){
-                // reset colors
+                // reset colors of chimes
                 for(var j=0; j<bodies.length; j++) {
-                    meshes[j].children[0].material.color.r = 0.1;
-                    meshes[j].children[0].material.color.g = 0.1;
-                    meshes[j].children[0].material.color.b = 0.1;
+                    if(chimeIndices.includes(j)) {
+                        meshes[j].children[0].material.color.r = 0.1;
+                        meshes[j].children[0].material.color.g = 0.1;
+                        meshes[j].children[0].material.color.b = 0.1;
+                    }
                 }
                 
                 // reverse these for loops?
