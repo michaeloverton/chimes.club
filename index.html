@@ -45,6 +45,11 @@
             var SHADOW_MAP_WIDTH = 1024;
             var SHADOW_MAP_HEIGHT = 1024;
 
+            // shape constants
+            var CHIME_TYPE = "chime";
+            var STRIKER_TYPE = "striker";
+            var CHAIN_TYPE = "chain";
+
             if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
             var container;
@@ -84,12 +89,15 @@
             var chimeDistance = 9;
             var chimeMass = 5;
             var chimeShape = new CANNON.Cylinder(chimeRadius,chimeRadius,chimeLength,40);
+            var chimeLights = {};
+            var chimeLight;
 
             // second tier chimes
             var secondTierChimeCount = 7;
 
             // shared material
-            var materialColor = 0xdddddd;
+            //var materialColor = 0xdddddd;
+            var materialColor = 0x888888;
             var solidMaterial = new THREE.MeshPhongMaterial({ 
                 color: materialColor, 
                 specular: 0x050505,
@@ -110,6 +118,8 @@
             initThree();
             initWad();
             animate();
+
+            console.log(chimeLights);
 
             function initCannon(){
                 world = new CANNON.World();
@@ -197,7 +207,7 @@
                     world.addBody(chimeBody);
                     bodies.push(chimeBody);
                     chimeIndices.push(bodies.length-1); // track index of chime in bodies array
-                    addVisual(chimeBody);
+                    addVisual(chimeBody, CHIME_TYPE);
 
                     var lastChainBody = null;
                     for(var j=0; j<chainCount; j++) {
@@ -254,7 +264,7 @@
                     world.addBody(chimeBody);
                     bodies.push(chimeBody);
                     chimeIndices.push(bodies.length-1); // track index of chime in bodies array
-                    addVisual(chimeBody);
+                    addVisual(chimeBody, CHIME_TYPE);
 
                     var lastChainBody = null;
                     for(var j=0; j<chainCount; j++) {
@@ -301,8 +311,8 @@
                 document.body.appendChild( container );
 
                 // scene
-                scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
-                //scene.fog = new THREE.Fog( 0x000000, 1000, FAR );
+                // scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
+                scene.fog = new THREE.Fog( 0x000000, 1000, FAR );
 
                 // camera
                 camera = new THREE.PerspectiveCamera( 24, SCREEN_WIDTH / SCREEN_HEIGHT, NEAR, FAR );
@@ -349,7 +359,8 @@
                 scene.add(light);
 
                 // renderer
-                renderer = new THREE.WebGLRenderer( { antialias: true } );
+                //renderer = new THREE.WebGLRenderer( { antialias: true } );
+                renderer = new THREE.WebGLRenderer( { antialias: true, maxLights: 20 } );
                 renderer.setSize( window.innerWidth, window.innerHeight );
                 renderer.setClearColor( scene.fog.color );
 
@@ -371,6 +382,7 @@
                 info.style.color = 'white';
                 info.innerHTML = 'chimes.club';
                 container.appendChild( info );
+
             }
 
             function initWad() {
@@ -517,6 +529,7 @@
                         meshes[j].children[0].material.color.r = 0.1;
                         meshes[j].children[0].material.color.g = 0.1;
                         meshes[j].children[0].material.color.b = 0.1;
+                        chimeLights[j].power = 0;
                     }
                 }
                 
@@ -531,6 +544,7 @@
                                 meshes[j].children[0].material.color.r = 1;
                                 meshes[j].children[0].material.color.g = 0;
                                 meshes[j].children[0].material.color.b = 0;
+                                chimeLights[j].power = 5;
                             }
                         }
                     }
@@ -598,12 +612,12 @@
 
             }
 
-            function addVisual(body){
+            function addVisual(body, type){
                 var s = this.settings;
                 // What geometry should be used?
                 var mesh;
                 if(body instanceof CANNON.Body){
-                    mesh = shape2mesh(body);
+                    mesh = shape2mesh(body, type);
                 }
                 if(mesh) {
                     // add mesh
@@ -612,10 +626,19 @@
                     body.visualref.visualId = bodies.length - 1;
                     //mesh.useQuaternion = true;
                     scene.add(mesh);
+                    
+                    // add lights to chimes
+                    if(type == CHIME_TYPE) {
+                        var chimeLight = new THREE.PointLight( 0xff0000, 2, 50 );
+                        chimeLight.add( mesh );
+                        scene.add( chimeLight );
+                        chimeLight.power = 0;
+                        chimeLights[meshes.length-1] = chimeLight;
+                    }
                 }
             };
 
-            function shape2mesh(body) {
+            function shape2mesh(body, type) {
                 var obj = new THREE.Object3D();
 
                 for (var l = 0; l < body.shapes.length; l++) {
@@ -681,14 +704,28 @@
                         geo.computeBoundingSphere();
                         geo.computeFaceNormals();
                         
-                        // for each chime, separate material
-                        var newMaterial = new THREE.MeshPhongMaterial({ 
-                            color: materialColor,
-                            specular: 0x050505,
-                            shininess: 100} 
-                        );
+                        var currentMaterial;
+                        var mesh;
+                        if(type == CHIME_TYPE) {
+                            // for each chime, separate material
+                            currentMaterial = new THREE.MeshPhongMaterial({ 
+                                color: materialColor,
+                                specular: 0x050505,
+                                shininess: 100} 
+                            );
+                            mesh = new THREE.Mesh( geo, currentMaterial );
+                        }
+                        else {
+                            currentMaterial = solidMaterial;
+                            mesh = new THREE.Mesh( geo, currentMaterial );
+
+                            var strikerLight = new THREE.PointLight( 0x80ff80, 2, 50 );
+                            strikerLight.add( mesh );
+                            scene.add( strikerLight );
+                            strikerLight.power = 0;
+                        }
                         
-                        mesh = new THREE.Mesh( geo, newMaterial );
+                        
                         break;
 
                     case CANNON.Shape.types.HEIGHTFIELD:
