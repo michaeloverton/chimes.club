@@ -83,10 +83,10 @@
             var strikerBody = new CANNON.Body({ mass: strikerMass });
 
             // chime vars
-            var chimeCount = 5;
-            var chimeLength = 40; // height above origin = 20
+            var chimeCount = 9;
+            var chimeLength = 70; // height above origin = 20
             var chimeRadius = 1.5;//0.5;
-            var chimeDistance = 9;
+            var chimeDistance = 12;
             var chimeMass = 5;
             var chimeShape = new CANNON.Cylinder(chimeRadius,chimeRadius,chimeLength,40);
             var chimeLights = {};
@@ -120,6 +120,7 @@
             animate();
 
             console.log(chimeLights);
+            console.log(chimeSounds);
 
             function initCannon(){
                 world = new CANNON.World();
@@ -148,7 +149,6 @@
                 bodies.push(strikerBody);
                 
                 strikerIndex = bodies.length-1;
-                console.log("INDEX: " + strikerIndex);
                 addVisual(strikerBody);
 
                 // set up striker chain
@@ -302,7 +302,7 @@
 
                 }
                 */
-
+                
             }
 
             function initThree() {
@@ -311,7 +311,7 @@
                 document.body.appendChild( container );
 
                 // scene
-                // scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
+                //scene.fog = new THREE.Fog( 0x222222, 1000, FAR );
                 scene.fog = new THREE.Fog( 0x000000, 1000, FAR );
 
                 // camera
@@ -338,10 +338,11 @@
                 // lights
                 var light, ambient;
                 //ambient = new THREE.AmbientLight( 0x222222 );
-                ambient = new THREE.AmbientLight( 0x000000 );
-                scene.add( ambient );
+                // ambient = new THREE.AmbientLight( 0x000000 );
+                // scene.add( ambient );
 
                 //light = new THREE.SpotLight( 0xffffff );
+                /*
                 light = new THREE.SpotLight( 0xffffff );
                 light.position.set( 30, 30, 40 );
                 light.target.position.set( 0, 0, 0 );
@@ -357,6 +358,14 @@
                 light.shadow.mapSize.width = SHADOW_MAP_WIDTH;
                 light.shadow.mapSize.height = SHADOW_MAP_HEIGHT;
                 scene.add(light);
+                */
+
+                /*
+                var pointLight = new THREE.PointLight( 0x0000ff, 1, 100 );
+                pointLight.position.set( 0, 0, -1 );
+                pointLight.power = 0.5;
+                scene.add( pointLight );
+                */
 
                 // renderer
                 //renderer = new THREE.WebGLRenderer( { antialias: true } );
@@ -501,6 +510,13 @@
                         chimeBody.velocity.y = yDir * 20 * Math.random();
                     }
                 }
+                if(frame % 100 == 0) {
+                    console.log("changing camera");
+                    var x = randomIntInRange(10, 150);
+                    var y = randomIntInRange(10, 150);
+                    var z = randomIntInRange(-100, 100);
+                    camera.position.set(x,y,z);
+                }
                 // prevent overflow?
                 if(frame % 12000000 == 0) {
                     frame = 0;
@@ -544,7 +560,7 @@
                                 meshes[j].children[0].material.color.r = 1;
                                 meshes[j].children[0].material.color.g = 0;
                                 meshes[j].children[0].material.color.b = 0;
-                                chimeLights[j].power = 5;
+                                chimeLights[j].power = 20;
                             }
                         }
                     }
@@ -629,7 +645,15 @@
                     
                     // add lights to chimes
                     if(type == CHIME_TYPE) {
-                        var chimeLight = new THREE.PointLight( 0xff0000, 2, 50 );
+                        var chimeLight;
+                        var lightColor;
+                        if(meshes.length % 2 == 0) {
+                            lightColor = 0x0000ff;
+                        }
+                        else {
+                            lightColor = 0xff0000;
+                        }
+                        chimeLight = new THREE.PointLight( lightColor, 2, 50 );
                         chimeLight.add( mesh );
                         scene.add( chimeLight );
                         chimeLight.power = 0;
@@ -813,6 +837,10 @@
             // THE SPEED OF IMPACT SHOULD DETERMINE VOLUME
             function playSine(pitch) {
                 sine.play(pitch);
+            }
+
+            function randomIntInRange(min, max) {
+                return min + (Math.random() * max);
             }
 
         </script>
